@@ -1,65 +1,261 @@
-Test whether our Splunk Web instance supports Integrated Windows Authentication using my currently signed-in Windows identity.
+Refactor the existing Splunk Playwright authentication system so it never closes, kills, copies, or directly opens my normal Microsoft Edge profile.
 
-Constraints:
+Current problem:
+- The existing implementation occasionally force-closes all Edge processes so it can copy or reopen an authenticated Edge profile.
+- This interrupts my normal work.
+- Splunk uses interactive SAML/Microsoft Entra SSO.
+- Integrated Windows authentication was tested and is not supported.
+- I am authorized to automate searches in this Splunk instance.
+- Python packages installed through pip are allowed.
 
-* I am authorized to access this Splunk instance.
-* I can install Python packages with pip, but cannot install normal applications.
-* Do not request, collect, store, print, or hard-code my username, password, browser cookies, authentication tokens, or Authorization headers.
-* Do not disable TLS certificate validation.
-* Do not make changes to Splunk.
-* Do not run a Splunk search yet. This task is only to test authentication.
-* Do not modify existing project files unless necessary. Put everything in a new folder named splunk_windows_auth_test.
+Primary goal:
+Replace Edge-profile copying with a dedicated authentication bootstrap and Playwright storage-state reuse.
 
-Perform these steps:
+Required architecture:
 
-1. Verify that the system is Windows and display the Python version.
-2. Install these packages using the active Python interpreter:
-    python -m pip install requests requests-negotiate-sspi
-3. Create splunk_windows_auth_test/test_windows_sso.py.
-4. The script must:
-    * Read the Splunk URL from the environment variable SPLUNK_BASE_URL.
-    * Exit with a clear message when that variable is missing.
-    * Normalize the URL without guessing a company hostname.
-    * Use requests.Session().
-    * Set session.auth = HttpNegotiateAuth().
-    * Use my current Windows identity through SSPI.
-    * Keep TLS verification enabled.
-    * Respect the HTTPS_PROXY, HTTP_PROXY, NO_PROXY, and REQUESTS_CA_BUNDLE environment variables.
-    * Use a 30-second timeout.
-    * First request the Splunk base URL.
-    * Then test a likely authenticated Splunk Web route, using /en-US/app/search/search unless the first response reveals a different locale or base path.
-    * Follow redirects, but record the redirect chain.
-    * Do not print response bodies, cookies, Authorization headers, session identifiers, or other secrets.
-    * Print only sanitized diagnostic information:
-        * HTTP status codes
-        * Request hostname and path
-        * Final hostname and path
-        * Redirect status codes and sanitized destinations
-        * WWW-Authenticate schemes, but not token contents
-        * Content type
-        * Whether the result appears to be Splunk Web
-        * Whether the result appears to be an SSO/SAML/Entra login page
-        * Whether Negotiate, Kerberos, or NTLM was offered
-    * Handle connection errors, proxy errors, timeouts, DNS failures, and TLS certificate errors separately.
-    * Never respond to a certificate error by setting verify=False. Instead, explain that an approved corporate CA bundle can be supplied through REQUESTS_CA_BUNDLE.
-5. Classify the result as one of:
-    * SUCCESS_WINDOWS_SSO: The request reached an authenticated Splunk page without an interactive login.
-    * NEGOTIATE_AVAILABLE_BUT_FAILED: The server offered Negotiate but authentication failed.
-    * INTERACTIVE_SSO_REQUIRED: The request redirected to SAML, Microsoft Entra, ADFS forms login, or another interactive identity provider.
-    * NEGOTIATE_NOT_SUPPORTED: No Negotiate challenge was offered.
-    * NETWORK_OR_TLS_BLOCKED: The test could not reach Splunk successfully.
-    * INCONCLUSIVE: The response cannot safely be classified.
-6. Create a short README.md containing exact PowerShell commands to run the test:
-    $env:SPLUNK_BASE_URL = "https://REPLACE-WITH-AUTHORIZED-SPLUNK-HOST"
-    python .\splunk_windows_auth_test\test_windows_sso.py
-7. Run the script only when SPLUNK_BASE_URL is already available in the environment. Otherwise, finish by showing me the command I need to run after replacing the placeholder URL.
-8. Review the implementation for accidental secret logging.
-9. Report:
-    * Files created
-    * Packages installed
-    * Test classification, when executed
-    * The sanitized redirect path
-    * Whether Integrated Windows Authentication appears viable
-    * The safest next step
+1. Normal Edge isolation
 
-Do not attempt browser-cookie extraction or fall back to Playwright during this test.
+- Never access the normal Edge User Data directory.
+- Never inspect, copy, rename, delete, or lock my regular Edge profile.
+- Remove all uses of:
+  - taskkill /IM msedge.exe
+  - Stop-Process -Name msedge
+  - taskkill /F
+  - global Edge process termination
+- Never terminate an Edge process that was not launched by this application.
+- Search the existing codebase for profile copying, Edge termination, process cleanup, and stale-lock handling.
+- Report every location found before changing it.
+
+2. Dedicated authentication profile
+
+Use a dedicated directory similar to:
+
+runtime/splunk-auth-profile
+
+Launch it only with:
+
+playwright.chromium.launch_persistent_context(
+    user_data_dir=dedicated_profile_path,
+    channel="msedge",
+    headless=False
+)
+
+This profile is used only for interactive Splunk authentication.
+
+It must never be used directly by headless search workers.
+
+3. Authentication-state export
+
+After the user successfully reaches an authenticated Splunk page, save authentication state with:
+
+context.storage_state(
+    path=auth_state_path,
+    indexed_db=True
+)
+
+Use a path similar to:
+
+runtime/auth-state.json
+
+The state must be written atomically:
+
+- Write to auth-state.json.tmp
+- Validate that it is valid JSON
+- Replace auth-state.json using os.replace()
+
+Do not require the persistent Edge profile to be copied.
+
+Do not require normal Edge to close.
+
+4. Session-storage compatibility
+
+Check whether the authenticated Splunk session uses sessionStorage.
+
+If relevant values exist for the authorized Splunk hostname:
+
+- Export sessionStorage separately.
+- Store it in runtime/session-state.json.
+- Restore it using browser_context.add_init_script before navigation.
+- Do not print values.
+- Do not capture sessionStorage from unrelated hostnames.
+- Do not capture SAML or Microsoft login-domain sessionStorage unless it is clearly required for the resulting Splunk session.
+
+5. Headless search worker
+
+The search worker must not use launch_persistent_context.
+
+Instead use:
+
+browser = playwright.chromium.launch(
+    channel="msedge",
+    headless=True
+)
+
+context = browser.new_context(
+    storage_state=auth_state_path
+)
+
+Restore approved Splunk sessionStorage if required.
+
+Each search job should use a fresh temporary context or a controlled pool of contexts.
+
+The worker must never open the dedicated authentication profile directory.
+
+6. Authentication validation
+
+Before running a search:
+
+- Navigate to a harmless authenticated Splunk route.
+- Detect redirects to:
+  - /account/login
+  - SAML
+  - Microsoft login
+  - Entra
+  - ADFS
+- Verify that the final page is an authenticated Splunk page.
+- Do not decide authentication solely from an HTTP 200 response because a login page can return 200.
+
+Classify authentication as:
+
+- AUTH_VALID
+- AUTH_EXPIRED
+- AUTH_STATE_MISSING
+- AUTH_STATE_INVALID
+- SPLUNK_UNAVAILABLE
+- INCONCLUSIVE
+
+When authentication is expired:
+
+- Stop the search cleanly.
+- Do not retry repeatedly.
+- Do not kill Edge.
+- Return a clear message instructing the user to run the dedicated authentication bootstrap.
+- Optionally launch only the dedicated headed authentication profile after explicit user confirmation.
+
+7. Search execution
+
+Preserve the existing authorized search functionality.
+
+Prefer, in order:
+
+- Authenticated HTTP calls through context.request
+- Captured structured JSON or CSV responses
+- Splunk export downloads
+- Existing DOM automation only as a final fallback
+
+Do not expose cookies, CSRF values, request bodies, SAML assertions, Authorization headers, or tokens in logs.
+
+8. Concurrency
+
+Add a lock so only one authentication-bootstrap process can open the dedicated persistent profile at a time.
+
+The lock must apply only to this automation profile.
+
+It must not inspect or interfere with normal Edge.
+
+Use a search queue or semaphore to prevent agents from launching competing profile instances.
+
+Do not resolve lock contention by killing processes.
+
+For a stale lock:
+
+- Determine whether the owning process still exists.
+- Remove the lock only when the recorded owner no longer exists.
+- Never terminate that process automatically.
+
+9. Process ownership
+
+Track the PID of every browser process launched by this application.
+
+On cleanup:
+
+- First close Playwright contexts normally.
+- Then close the Playwright browser normally.
+- Only consider terminating a process if its PID was directly launched and recorded by this application.
+- Never terminate processes by image name alone.
+- Never affect unrelated msedge.exe processes.
+
+10. Security
+
+Add these to .gitignore:
+
+runtime/
+auth-state.json
+session-state.json
+*profile*/
+*.har
+*.tmp
+
+Treat saved authentication state as a credential.
+
+Do not print its contents.
+
+Do not send it to an AI model.
+
+Do not commit it.
+
+Do not disable TLS validation.
+
+Do not extract cookies from normal Edge.
+
+11. Files
+
+Create or refactor into:
+
+splunk_auth/
+    bootstrap.py
+    state.py
+    validation.py
+    process_owner.py
+    locking.py
+
+splunk_search/
+    worker.py
+    transport.py
+
+runtime/
+    splunk-auth-profile/
+    auth-state.json
+    session-state.json
+
+12. Commands
+
+Provide commands similar to:
+
+python -m splunk_auth.bootstrap
+
+python -m splunk_search.worker --query-file test_search.spl
+
+13. Tests
+
+Test these scenarios without running a broad Splunk search:
+
+- Normal Edge is already open.
+- Authentication state is valid.
+- Authentication state is expired.
+- Authentication file is missing.
+- Dedicated authentication profile is already open.
+- Two search workers start simultaneously.
+- A stale application lock exists.
+- A normal unrelated Edge process exists.
+- Cleanup runs after an exception.
+
+Confirm that no test closes or disrupts normal Edge.
+
+14. Final report
+
+Report:
+
+- Existing code that killed or copied Edge profiles
+- Why that behavior occurred
+- Files changed
+- New authentication flow
+- Whether storage_state alone worked
+- Whether sessionStorage was needed
+- Whether headless Splunk authentication succeeded
+- Confirmation that normal Edge remained open
+- Any remaining manual authentication step
+
+Do not request a Splunk token during this refactor.
+Do not implement browser-cookie extraction.
+Do not attach to my normal Edge profile.
