@@ -1,0 +1,65 @@
+Test whether our Splunk Web instance supports Integrated Windows Authentication using my currently signed-in Windows identity.
+
+Constraints:
+
+* I am authorized to access this Splunk instance.
+* I can install Python packages with pip, but cannot install normal applications.
+* Do not request, collect, store, print, or hard-code my username, password, browser cookies, authentication tokens, or Authorization headers.
+* Do not disable TLS certificate validation.
+* Do not make changes to Splunk.
+* Do not run a Splunk search yet. This task is only to test authentication.
+* Do not modify existing project files unless necessary. Put everything in a new folder named splunk_windows_auth_test.
+
+Perform these steps:
+
+1. Verify that the system is Windows and display the Python version.
+2. Install these packages using the active Python interpreter:
+    python -m pip install requests requests-negotiate-sspi
+3. Create splunk_windows_auth_test/test_windows_sso.py.
+4. The script must:
+    * Read the Splunk URL from the environment variable SPLUNK_BASE_URL.
+    * Exit with a clear message when that variable is missing.
+    * Normalize the URL without guessing a company hostname.
+    * Use requests.Session().
+    * Set session.auth = HttpNegotiateAuth().
+    * Use my current Windows identity through SSPI.
+    * Keep TLS verification enabled.
+    * Respect the HTTPS_PROXY, HTTP_PROXY, NO_PROXY, and REQUESTS_CA_BUNDLE environment variables.
+    * Use a 30-second timeout.
+    * First request the Splunk base URL.
+    * Then test a likely authenticated Splunk Web route, using /en-US/app/search/search unless the first response reveals a different locale or base path.
+    * Follow redirects, but record the redirect chain.
+    * Do not print response bodies, cookies, Authorization headers, session identifiers, or other secrets.
+    * Print only sanitized diagnostic information:
+        * HTTP status codes
+        * Request hostname and path
+        * Final hostname and path
+        * Redirect status codes and sanitized destinations
+        * WWW-Authenticate schemes, but not token contents
+        * Content type
+        * Whether the result appears to be Splunk Web
+        * Whether the result appears to be an SSO/SAML/Entra login page
+        * Whether Negotiate, Kerberos, or NTLM was offered
+    * Handle connection errors, proxy errors, timeouts, DNS failures, and TLS certificate errors separately.
+    * Never respond to a certificate error by setting verify=False. Instead, explain that an approved corporate CA bundle can be supplied through REQUESTS_CA_BUNDLE.
+5. Classify the result as one of:
+    * SUCCESS_WINDOWS_SSO: The request reached an authenticated Splunk page without an interactive login.
+    * NEGOTIATE_AVAILABLE_BUT_FAILED: The server offered Negotiate but authentication failed.
+    * INTERACTIVE_SSO_REQUIRED: The request redirected to SAML, Microsoft Entra, ADFS forms login, or another interactive identity provider.
+    * NEGOTIATE_NOT_SUPPORTED: No Negotiate challenge was offered.
+    * NETWORK_OR_TLS_BLOCKED: The test could not reach Splunk successfully.
+    * INCONCLUSIVE: The response cannot safely be classified.
+6. Create a short README.md containing exact PowerShell commands to run the test:
+    $env:SPLUNK_BASE_URL = "https://REPLACE-WITH-AUTHORIZED-SPLUNK-HOST"
+    python .\splunk_windows_auth_test\test_windows_sso.py
+7. Run the script only when SPLUNK_BASE_URL is already available in the environment. Otherwise, finish by showing me the command I need to run after replacing the placeholder URL.
+8. Review the implementation for accidental secret logging.
+9. Report:
+    * Files created
+    * Packages installed
+    * Test classification, when executed
+    * The sanitized redirect path
+    * Whether Integrated Windows Authentication appears viable
+    * The safest next step
+
+Do not attempt browser-cookie extraction or fall back to Playwright during this test.
