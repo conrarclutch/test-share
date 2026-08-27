@@ -1,261 +1,1024 @@
-Refactor the existing Splunk Playwright authentication system so it never closes, kills, copies, or directly opens my normal Microsoft Edge profile.
+Investigation OS — Refactor the Existing Agent Dashboard into an Investigation-Centric Workspace
 
-Current problem:
-- The existing implementation occasionally force-closes all Edge processes so it can copy or reopen an authenticated Edge profile.
-- This interrupts my normal work.
-- Splunk uses interactive SAML/Microsoft Entra SSO.
-- Integrated Windows authentication was tested and is not supported.
-- I am authorized to automate searches in this Splunk instance.
-- Python packages installed through pip are allowed.
+I want you to evolve the application that already exists into an investigation-centric workspace / Investigation OS.
 
-Primary goal:
-Replace Edge-profile copying with a dedicated authentication bootstrap and Playwright storage-state reuse.
+CRITICAL: DO NOT REBUILD THE APPLICATION
 
-Required architecture:
+Before making changes:
 
-1. Normal Edge isolation
+1. Inspect the existing repository thoroughly.
+2. Understand the current architecture, components, agent views, CLI integration, state management, and styling.
+3. Identify what can be reused.
+4. Preserve working functionality.
+5. Refactor incrementally rather than replacing large portions of the application.
 
-- Never access the normal Edge User Data directory.
-- Never inspect, copy, rename, delete, or lock my regular Edge profile.
-- Remove all uses of:
-  - taskkill /IM msedge.exe
-  - Stop-Process -Name msedge
-  - taskkill /F
-  - global Edge process termination
-- Never terminate an Edge process that was not launched by this application.
-- Search the existing codebase for profile copying, Edge termination, process cleanup, and stale-lock handling.
-- Report every location found before changing it.
+The existing agent-focused dashboard is valuable and should NOT be deleted.
 
-2. Dedicated authentication profile
+Instead, change the application’s primary organizational model from:
 
-Use a dedicated directory similar to:
+Agent → Tasks → Output
 
-runtime/splunk-auth-profile
+to:
 
-Launch it only with:
+Investigation → Context → Agents → Evidence → Timeline → Findings
 
-playwright.chromium.launch_persistent_context(
-    user_data_dir=dedicated_profile_path,
-    channel="msedge",
-    headless=False
-)
+Agents become capabilities that operate inside investigations.
 
-This profile is used only for interactive Splunk authentication.
+The goal is to morph the existing application into this model without destroying the work that has already been done.
 
-It must never be used directly by headless search workers.
+⸻
 
-3. Authentication-state export
+1. DEVELOPMENT APPROACH
 
-After the user successfully reaches an authenticated Splunk page, save authentication state with:
+Use Luna subagents heavily to perform the implementation work.
 
-context.storage_state(
-    path=auth_state_path,
-    indexed_db=True
-)
+The primary agent should behave as the architect/coordinator.
 
-Use a path similar to:
+Delegate appropriate work to Luna subagents for things such as:
 
-runtime/auth-state.json
+* repository analysis
+* existing architecture mapping
+* database/data-model implementation
+* UI component work
+* investigation workspace
+* persistent chat
+* agent integration
+* timeline implementation
+* parent/child investigation support
+* testing
+* code review
+* migration/refactoring analysis
 
-The state must be written atomically:
+Parallelize independent work when safe.
 
-- Write to auth-state.json.tmp
-- Validate that it is valid JSON
-- Replace auth-state.json using os.replace()
+The coordinating agent should review and integrate subagent work rather than blindly accepting changes.
 
-Do not require the persistent Edge profile to be copied.
+Before implementation, produce a concise internal architecture plan based on the actual repository.
 
-Do not require normal Edge to close.
+Do not invent a new architecture without first understanding what already exists.
 
-4. Session-storage compatibility
+⸻
 
-Check whether the authenticated Splunk session uses sessionStorage.
+2. CORE CONCEPT
 
-If relevant values exist for the authorized Splunk hostname:
+The central object in the application should now be an:
 
-- Export sessionStorage separately.
-- Store it in runtime/session-state.json.
-- Restore it using browser_context.add_init_script before navigation.
-- Do not print values.
-- Do not capture sessionStorage from unrelated hostnames.
-- Do not capture SAML or Microsoft login-domain sessionStorage unless it is clearly required for the resulting Splunk session.
+Investigation
 
-5. Headless search worker
+An investigation is a persistent workspace containing everything related to a case.
 
-The search worker must not use launch_persistent_context.
+Example:
 
-Instead use:
+CASE-2026-0142 — Potential DLP Exfiltration
 
-browser = playwright.chromium.launch(
-    channel="msedge",
-    headless=True
-)
+Opening the investigation should feel somewhat like opening a project in Linear, Notion, or a modern SaaS application.
 
-context = browser.new_context(
-    storage_state=auth_state_path
-)
+The investigation should persist across:
 
-Restore approved Splunk sessionStorage if required.
+* application restarts
+* CLI restarts
+* browser refreshes
+* computer reboots
 
-Each search job should use a fresh temporary context or a controlled pool of contexts.
+The user should be able to return tomorrow, open the investigation, and immediately continue where they left off.
 
-The worker must never open the dedicated authentication profile directory.
+⸻
 
-6. Authentication validation
+3. INVESTIGATION WORKSPACE
 
-Before running a search:
+Each investigation should have its own workspace.
 
-- Navigate to a harmless authenticated Splunk route.
-- Detect redirects to:
-  - /account/login
-  - SAML
-  - Microsoft login
-  - Entra
-  - ADFS
-- Verify that the final page is an authenticated Splunk page.
-- Do not decide authentication solely from an HTTP 200 response because a login page can return 200.
+The workspace should bring together:
 
-Classify authentication as:
+* investigation overview
+* status
+* subjects/users
+* persistent investigation chat
+* agents
+* agent activity
+* timeline
+* evidence/artifacts
+* findings
+* notes
+* attachments
+* source information
+* investigation metadata
+* reviewer results
 
-- AUTH_VALID
-- AUTH_EXPIRED
-- AUTH_STATE_MISSING
-- AUTH_STATE_INVALID
-- SPLUNK_UNAVAILABLE
-- INCONCLUSIVE
+Do NOT make these feel like completely disconnected applications.
 
-When authentication is expired:
+They are different views into the same investigation state.
 
-- Stop the search cleanly.
-- Do not retry repeatedly.
-- Do not kill Edge.
-- Return a clear message instructing the user to run the dedicated authentication bootstrap.
-- Optionally launch only the dedicated headed authentication profile after explicit user confirmation.
+A possible navigation model could include:
 
-7. Search execution
+Overview | Chat | Timeline | Evidence | Agents | Notes
 
-Preserve the existing authorized search functionality.
+Use the existing design system and application aesthetic wherever possible.
 
-Prefer, in order:
+⸻
 
-- Authenticated HTTP calls through context.request
-- Captured structured JSON or CSV responses
-- Splunk export downloads
-- Existing DOM automation only as a final fallback
+4. INVESTIGATION SIDEBAR
 
-Do not expose cookies, CSRF values, request bodies, SAML assertions, Authorization headers, or tokens in logs.
+Create a persistent investigation navigation system.
 
-8. Concurrency
+For example:
 
-Add a lock so only one authentication-bootstrap process can open the dedicated persistent profile at a time.
+INVESTIGATIONS
+CASE-142
+Potential DLP Exfiltration
+● Active
+CASE-141
+Unauthorized Cloud Storage
+● Review
+CASE-140
+Policy Violation
+✓ Closed
 
-The lock must apply only to this automation profile.
+Selecting an investigation changes the entire workspace context.
 
-It must not inspect or interfere with normal Edge.
+I should be able to jump rapidly between investigations without losing state.
 
-Use a search queue or semaphore to prevent agents from launching competing profile instances.
+Provide useful lightweight information such as:
 
-Do not resolve lock contention by killing processes.
+* case ID
+* title
+* status
+* last updated
+* subject(s)
+* unread/new activity if appropriate
 
-For a stale lock:
+Do not overcrowd this interface.
 
-- Determine whether the owning process still exists.
-- Remove the lock only when the recorded owner no longer exists.
-- Never terminate that process automatically.
+⸻
 
-9. Process ownership
+5. PERSISTENT INVESTIGATION CHAT
 
-Track the PID of every browser process launched by this application.
+This is one of the most important features.
 
-On cleanup:
+Every investigation should have its own persistent chat.
 
-- First close Playwright contexts normally.
-- Then close the Playwright browser normally.
-- Only consider terminating a process if its PID was directly launched and recorded by this application.
-- Never terminate processes by image name alone.
-- Never affect unrelated msedge.exe processes.
+The experience should feel similar to returning to a ChatGPT conversation.
 
-10. Security
+If I:
 
-Add these to .gitignore:
+1. investigate something
+2. ask questions
+3. run agents
+4. close the application
+5. reboot the computer
+6. reopen the application
+7. reopen the investigation
 
-runtime/
-auth-state.json
-session-state.json
-*profile*/
-*.har
-*.tmp
+…the conversation should still be there.
 
-Treat saved authentication state as a credential.
+I should be able to immediately type:
 
-Do not print its contents.
+What did we determine about the USB activity?
 
-Do not send it to an AI model.
+or:
 
-Do not commit it.
+Why did we consider this event suspicious?
 
-Do not disable TLS validation.
+and the system should understand the investigation context.
 
-Do not extract cookies from normal Edge.
+Do NOT rely on model memory.
 
-11. Files
+Persist conversation state locally.
 
-Create or refactor into:
+The application should intelligently construct context for each new request using some combination of:
 
-splunk_auth/
-    bootstrap.py
-    state.py
-    validation.py
-    process_owner.py
-    locking.py
+* recent conversation
+* investigation summary
+* investigation metadata
+* relevant timeline events
+* findings
+* evidence
+* agent outputs
+* retrieved historical messages
 
-splunk_search/
-    worker.py
-    transport.py
+Do NOT blindly send the entire investigation to the model every time.
 
-runtime/
-    splunk-auth-profile/
-    auth-state.json
-    session-state.json
+Build a context assembly/retrieval layer.
 
-12. Commands
+⸻
 
-Provide commands similar to:
+6. LOCAL STORAGE
 
-python -m splunk_auth.bootstrap
+For now this application is local-first.
 
-python -m splunk_search.worker --query-file test_search.spl
+Do NOT introduce:
 
-13. Tests
+* Postgres
+* cloud databases
+* hosted infrastructure
+* GitHub synchronization
+* SharePoint synchronization
+* unnecessary services
 
-Test these scenarios without running a broad Splunk search:
+Use something lightweight such as SQLite, assuming it fits naturally with the existing architecture.
 
-- Normal Edge is already open.
-- Authentication state is valid.
-- Authentication state is expired.
-- Authentication file is missing.
-- Dedicated authentication profile is already open.
-- Two search workers start simultaneously.
-- A stale application lock exists.
-- A normal unrelated Edge process exists.
-- Cleanup runs after an exception.
+The expected workload is small.
 
-Confirm that no test closes or disrupts normal Edge.
+This is not a high-throughput application.
 
-14. Final report
+Design the persistence abstraction cleanly enough that another backend could eventually replace SQLite without rewriting the application.
 
-Report:
+Store things such as:
 
-- Existing code that killed or copied Edge profiles
-- Why that behavior occurred
-- Files changed
-- New authentication flow
-- Whether storage_state alone worked
-- Whether sessionStorage was needed
-- Whether headless Splunk authentication succeeded
-- Confirmation that normal Edge remained open
-- Any remaining manual authentication step
+* investigations
+* parent/child relationships
+* subjects
+* chat messages
+* notes
+* timeline events
+* evidence metadata
+* agent runs
+* findings
+* investigation summaries
+* application state
 
-Do not request a Splunk token during this refactor.
-Do not implement browser-cookie extraction.
-Do not attach to my normal Edge profile.
+Avoid storing unnecessary duplicate data.
+
+⸻
+
+7. PARENT + CHILD INVESTIGATIONS
+
+Investigations need hierarchy.
+
+Example:
+
+CASE-142
+DLP Exfiltration Event
+├── CASE-142-A
+│   John Smith
+│
+└── CASE-142-B
+    Jane Doe
+
+The parent represents the overall incident.
+
+Child investigations represent individual subjects or investigative threads.
+
+This is important.
+
+Parent investigation
+
+May contain:
+
+* common DLP event
+* shared files
+* shared evidence
+* incident-level notes
+* common timeline events
+* overall findings
+
+Child investigation
+
+May contain:
+
+* subject identity
+* subject-specific evidence
+* subject-specific timeline
+* subject-specific chat
+* agent runs
+* findings
+* notes
+
+Child investigations should inherit/reference appropriate parent context without duplicating everything.
+
+⸻
+
+8. CONTEXT-AWARE CHAT
+
+Context should depend on where the user is.
+
+If I am inside:
+
+CASE-142-A — John Smith
+
+and ask:
+
+What happened after the DLP event?
+
+the system should primarily reason over John’s investigation plus relevant inherited parent context.
+
+If I go to:
+
+CASE-142 — DLP Exfiltration
+
+and ask:
+
+Compare the activity of both users.
+
+the system should be capable of retrieving information from both child investigations and reasoning across them.
+
+This distinction should exist in the architecture, not just in the UI.
+
+⸻
+
+9. AGENTS BECOME INVESTIGATION TOOLS
+
+Preserve the existing agent functionality.
+
+Do NOT eliminate the agent dashboard or agent capabilities.
+
+Instead, agents should now be callable from an investigation.
+
+For example:
+
+Run Agent
+Identity Agent
+Endpoint Agent
+Splunk Agent
+DLP Agent
+Timeline Agent
+Correlation Agent
+Reviewer Agent
+
+When an agent runs, it should automatically know:
+
+* investigation ID
+* subject(s)
+* investigation metadata
+* relevant existing evidence
+* appropriate investigation context
+
+The user should not repeatedly explain the case to every agent.
+
+⸻
+
+10. COPILOT CLI INTEGRATION
+
+Preserve and expand the existing GitHub Copilot CLI integration.
+
+I want to be able to initiate Copilot CLI operations from the investigation workspace.
+
+Where supported by the current CLI integration, expose useful controls such as:
+
+* model selection
+* agent selection
+* investigation context
+* prompt/task
+* run status
+
+Do NOT invent CLI capabilities.
+
+Inspect the current integration and installed CLI behavior first.
+
+Build around what is actually available.
+
+⸻
+
+11. MODEL SELECTION
+
+Where the underlying CLI supports it, allow me to choose which model should perform a task.
+
+For example, somewhere near the investigation chat/run controls:
+
+Model
+[ Selected Model ▼ ]
+
+Model selection should not clutter the primary UI.
+
+Use the CLI’s actual available models rather than hard-coding assumptions.
+
+⸻
+
+12. AGENT OUTPUT SHOULD UPDATE THE INVESTIGATION
+
+Agents should not merely produce isolated chat transcripts.
+
+Agent results should be capable of producing structured investigation updates.
+
+An agent might return:
+
+AgentRun
+summary
+findings[]
+timelineEvents[]
+evidence[]
+relationships[]
+notes[]
+warnings[]
+
+The application can then incorporate those results into the investigation.
+
+For example:
+
+Splunk Agent discovers login activity
+
+↓
+
+creates timeline event
+
+↓
+
+links supporting evidence
+
+↓
+
+updates investigation state
+
+↓
+
+chat can immediately reason over it
+
+The Investigation is the source of truth.
+
+Agents contribute information to it.
+
+⸻
+
+13. INVESTIGATION TIMELINE
+
+Every investigation should have a chronological timeline.
+
+Example:
+
+09:14
+DLP alert generated
+09:18
+USB device connected
+09:23
+archive.zip created
+09:26
+Cloud upload observed
+09:41
+Teams message sent
+
+Timeline events should support:
+
+* timestamp
+* normalized timestamp
+* original timestamp
+* timezone
+* source
+* description
+* related subject
+* related evidence
+* agent/source that created it
+* confidence if useful
+
+Allow agents to append timeline events.
+
+Allow manual timeline events as well.
+
+⸻
+
+14. TIMEZONE HANDLING
+
+Timezone mistakes are especially dangerous in investigations.
+
+Treat timestamps as first-class evidence.
+
+Whenever possible preserve:
+
+1. original timestamp
+2. original timezone
+3. normalized timestamp
+4. normalized timezone
+
+Never silently discard the original representation.
+
+The UI should clearly communicate timezone where ambiguity could matter.
+
+⸻
+
+15. REVIEWER AGENT
+
+Create/preserve a dedicated Reviewer Agent.
+
+Its job is NOT primarily to investigate.
+
+Its job is to challenge and validate the investigation.
+
+It should look for things such as:
+
+* timezone inconsistencies
+* timestamp conversion errors
+* impossible chronology
+* duplicate events
+* contradictory evidence
+* unsupported conclusions
+* missing attribution
+* gaps in the timeline
+* weak evidence relationships
+* conclusions not supported by evidence
+* agent hallucinations
+* evidence referenced without a source
+
+Example:
+
+REVIEW
+⚠ Timeline inconsistency
+DLP timestamp:
+14:32 UTC
+Endpoint timestamp:
+14:28 MST
+These events may have been ordered incorrectly
+after timezone normalization.
+
+Reviewer findings should be clearly differentiated from normal investigative findings.
+
+⸻
+
+16. REFRESH / SYNC INVESTIGATION
+
+Add a prominent but unobtrusive:
+
+Refresh Investigation
+
+or:
+
+Sync
+
+action.
+
+This is NOT intended to constantly scrape applications.
+
+It is an explicit user-triggered action.
+
+When activated, the system should run the existing approved retrieval mechanism(s) available to the application.
+
+For example, if the current environment has an existing method for retrieving case notes or case information, the refresh operation can:
+
+1. retrieve current information
+2. compare it with stored state
+3. identify changes
+4. ingest new information
+5. update the timeline if appropriate
+6. update the investigation summary
+7. show what changed
+
+If the existing system has something similar to a “TORQ pull” or other case retrieval process, integrate with the existing implementation rather than inventing a new retrieval method.
+
+Make the synchronization architecture pluggable so other approved sources can eventually be added.
+
+⸻
+
+17. EVIDENCE / ARTIFACT MODEL
+
+The investigation should support evidence/artifacts such as:
+
+* emails
+* Teams conversations
+* files
+* screenshots
+* case notes
+* DLP events
+* endpoint events
+* identity information
+* logs
+* agent-generated findings
+
+For now, do NOT build unauthorized scraping or API integrations.
+
+Build the data model and ingestion architecture so these artifacts can be introduced through approved mechanisms later.
+
+Every artifact should retain provenance.
+
+At minimum consider:
+
+* source
+* original identifier
+* creation time
+* ingestion time
+* related subject
+* related investigation
+* extracted text
+* metadata
+* original location/reference
+* agent/user responsible for ingestion
+
+Evidence provenance is more important than clever AI behavior.
+
+⸻
+
+18. SEARCH / RETRIEVAL
+
+I want to eventually be able to ask questions like:
+
+Did this user ever mention GitHub?
+
+What happened immediately before the upload?
+
+Show me everything involving this filename.
+
+What evidence supports this conclusion?
+
+Compare the two subjects.
+
+Design a retrieval layer capable of answering these questions.
+
+Do NOT overengineer this initially.
+
+Start with SQLite capabilities such as structured queries and full-text search if sufficient.
+
+Add embeddings/vector retrieval only if they materially improve the application.
+
+If semantic search is implemented, keep it local and lightweight.
+
+The system should always preserve the relationship between retrieved text and its original evidence.
+
+⸻
+
+19. INVESTIGATION MEMORY
+
+Implement investigation memory as a layered system rather than “send the entire chat.”
+
+Conceptually:
+
+Investigation
+      │
+      ├── Structured State
+      │
+      ├── Investigation Summary
+      │
+      ├── Timeline
+      │
+      ├── Evidence
+      │
+      ├── Findings
+      │
+      ├── Agent Runs
+      │
+      └── Chat History
+              │
+              ▼
+       Context Builder
+              │
+              ▼
+          Copilot CLI
+
+The Context Builder should decide what information is relevant to the current request.
+
+Recent conversation can be included directly.
+
+Older conversation can be summarized/retrieved when relevant.
+
+Important findings should exist as structured investigation data rather than being trapped inside old chat messages.
+
+⸻
+
+20. INVESTIGATION OVERVIEW
+
+Opening an investigation should immediately answer:
+
+What is happening with this case?
+
+Consider showing:
+
+CASE-142
+Potential DLP Exfiltration
+ACTIVE
+Subject
+John Smith
+Risk
+High
+Last Updated
+18 minutes ago
+SUMMARY
+User generated a DLP alert involving...
+Subsequent endpoint activity shows...
+KEY FINDINGS
+• USB connected 4 minutes after alert
+• archive.zip created
+• Cloud upload observed
+TIMELINE
+────●────●────●────●────
+AGENTS
+Identity       ✓
+Endpoint       ✓
+DLP            ✓
+Correlation    Running...
+Reviewer       Not Run
+
+This is conceptual.
+
+Adapt it to the existing application’s visual language.
+
+⸻
+
+21. AGENT ACTIVITY PANE
+
+I still want visibility into agents.
+
+Create an agent/activity area showing things such as:
+
+AGENT ACTIVITY
+✓ Identity Agent
+  Resolved 3 identities
+✓ DLP Agent
+  Added 4 events
+● Correlation Agent
+  Running...
+○ Reviewer
+  Not run
+
+Clicking an agent run should reveal:
+
+* task/prompt
+* model
+* start/end time
+* output
+* structured changes
+* errors
+* evidence used
+
+This preserves the usefulness of the current agent-centric view while placing it in investigation context.
+
+⸻
+
+22. CHAT SHOULD BE ABLE TO INVOKE AGENTS
+
+The investigation chat should eventually support natural commands such as:
+
+Run the endpoint agent.
+
+Check Splunk for activity around this event.
+
+Review the timeline.
+
+Compare these users.
+
+Refresh the case and tell me what changed.
+
+Architect the system so chat can dispatch these actions through the existing agent framework.
+
+Do not tightly couple natural-language parsing directly to UI components.
+
+Create a clean action/tool layer.
+
+⸻
+
+23. HUMAN CONTROL
+
+This application supports human investigators.
+
+Agents should not silently alter important conclusions.
+
+Clearly differentiate:
+
+* imported evidence
+* manually entered information
+* agent findings
+* agent hypotheses
+* reviewer warnings
+* confirmed conclusions
+
+Where appropriate, allow investigator approval before promoting an agent hypothesis into a confirmed finding.
+
+⸻
+
+24. LOCAL-FIRST SECURITY PRINCIPLES
+
+Because this application deals with investigation information:
+
+* remain local-first
+* avoid unnecessary network services
+* do not add telemetry
+* do not add external analytics
+* do not expose localhost externally
+* avoid storing secrets directly in case records
+* use existing authentication/session mechanisms
+* do not create new credential collection mechanisms
+* preserve evidence provenance
+* log meaningful agent actions locally
+* do not bypass organizational security controls
+
+Do not implement stealth, evasion, security-tool bypasses, or unauthorized collection.
+
+⸻
+
+25. DATABASE DESIGN
+
+Design the schema around the domain rather than around the UI.
+
+Likely concepts include:
+
+Investigation
+Subject
+InvestigationSubject
+ChatThread
+ChatMessage
+TimelineEvent
+Evidence
+Finding
+Note
+Agent
+AgentRun
+AgentOutput
+ReviewFinding
+Relationship
+SyncRun
+
+An Investigation should support:
+
+id
+parent_id
+case_number
+title
+description
+status
+created_at
+updated_at
+closed_at
+summary
+
+Do not blindly implement this exact schema.
+
+First examine the existing application’s models and adapt them.
+
+Avoid unnecessary complexity.
+
+⸻
+
+26. UI DIRECTION
+
+I want this to feel like a polished modern SaaS application rather than an internal admin dashboard.
+
+Think:
+
+* Linear-like density
+* strong hierarchy
+* restrained interface
+* investigation-focused
+* minimal chrome
+* information dense without being cluttered
+* fast switching between cases
+* excellent typography
+* useful command interactions
+
+Avoid:
+
+* giant cards everywhere
+* excessive gradients
+* generic AI-dashboard aesthetics
+* unnecessary glowing AI graphics
+* excessive whitespace
+* a dashboard full of disconnected widgets
+
+The investigation itself should feel like the workspace.
+
+⸻
+
+27. COMMAND PALETTE
+
+If it fits naturally with the existing application, add or extend a command palette.
+
+Example:
+
+⌘K
+New Investigation
+Switch Investigation
+Run Agent
+Run Reviewer
+Refresh Investigation
+Add Note
+Add Timeline Event
+Search Evidence
+Open Parent Case
+Open Child Case
+
+This should make the application very fast for investigators who prefer keyboard-driven workflows.
+
+⸻
+
+28. DO NOT BUILD EVERYTHING AT ONCE
+
+Implement this incrementally.
+
+Phase 1 — Architecture + persistence
+
+Establish:
+
+* investigation domain model
+* SQLite persistence
+* existing-agent compatibility
+* parent/child investigations
+* investigation navigation
+
+Phase 2 — Investigation workspace
+
+Build:
+
+* overview
+* persistent chat
+* investigation switching
+* notes
+* basic timeline
+* agent activity
+
+Phase 3 — Agent integration
+
+Connect existing agents so they operate against investigation context and write structured results back into investigations.
+
+Phase 4 — Context + memory
+
+Build:
+
+* investigation summaries
+* context builder
+* chat retrieval
+* persistent conversation
+* investigation-aware agent prompts
+
+Phase 5 — Timeline + reviewer
+
+Implement:
+
+* timezone-aware timeline
+* evidence relationships
+* Reviewer Agent
+* contradiction/inconsistency detection
+
+Phase 6 — Refresh/sync
+
+Connect the application’s existing approved case-retrieval mechanisms to explicit investigation refresh.
+
+Phase 7 — Polish
+
+Improve:
+
+* keyboard navigation
+* command palette
+* loading states
+* agent progress
+* empty states
+* error handling
+* performance
+* visual consistency
+
+⸻
+
+29. MIGRATION OF THE CURRENT APPLICATION
+
+This is extremely important.
+
+Before changing code, determine:
+
+What exists today that can become part of an investigation?
+
+For example:
+
+Existing Agent Dashboard
+        ↓
+Investigation → Agents
+Existing Agent Output
+        ↓
+AgentRun / Finding
+Existing Chat
+        ↓
+Investigation Chat
+Existing CLI Integration
+        ↓
+Investigation Execution Layer
+Existing Agent Status UI
+        ↓
+Investigation Agent Activity
+
+Reuse components where possible.
+
+Do not perform a cosmetic rewrite of functioning components just because a different architecture might look cleaner.
+
+Prefer adapters and incremental refactoring.
+
+⸻
+
+30. FIRST TASK
+
+Do NOT immediately start rewriting files.
+
+First:
+
+1. Explore the repository.
+2. Map the existing architecture.
+3. Identify existing agent functionality.
+4. Identify Copilot CLI integration.
+5. Identify persistence/state mechanisms.
+6. Identify reusable UI components.
+7. Identify areas that would be dangerous to rewrite.
+8. Determine the smallest architectural change necessary to introduce Investigation as the primary domain object.
+
+Use Luna subagents to inspect different areas of the repository in parallel.
+
+Then produce a concise implementation plan.
+
+After that, begin implementation incrementally.
+
+After each major phase:
+
+* run existing tests
+* add appropriate tests
+* verify existing functionality
+* review the diff
+* have a Luna reviewer inspect the implementation
+* fix regressions before proceeding
+
+The finished application should feel like the same product evolving into an Investigation OS, not like somebody deleted the old application and built a different one.
+
+The ultimate mental model is:
+
+The investigation is the workspace. Agents are workers inside that workspace. Evidence is the source of truth. Chat is the investigator’s interface to everything.
+
+Build toward that.
