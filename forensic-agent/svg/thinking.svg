@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" class="forensic-icon" data-state="thinking" role="img" aria-labelledby="forensic-thinking-title forensic-thinking-desc">
+  <title id="forensic-thinking-title">Forensic agent, thinking</title>
+  <desc id="forensic-thinking-desc">A forensic agent considers evidence while three small dots appear inside its lens.</desc>
+  <style>
+
+  .forensic-icon { overflow: visible; }
+  .forensic-icon .forensic-stroke { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+  .forensic-icon .forensic-solid { fill: currentColor; stroke: none; }
+  .forensic-icon .motion { transform-box: view-box; }
+  .forensic-icon[data-paused="true"] .motion { animation-play-state: paused !important; }
+
+
+  .forensic-thinking-reticle { transform-origin: 80px 63px; animation: forensic-thinking-reticle 2.4s ease-in-out infinite; }
+  .forensic-thinking-dot { opacity: .18; }
+  .forensic-thinking-dot-1 { animation: forensic-thinking-dot-1 2.4s ease-in-out infinite; }
+  .forensic-thinking-dot-2 { animation: forensic-thinking-dot-2 2.4s ease-in-out infinite; }
+  .forensic-thinking-dot-3 { animation: forensic-thinking-dot-3 2.4s ease-in-out infinite; }
+  @keyframes forensic-thinking-reticle {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-12deg); }
+  }
+  @keyframes forensic-thinking-dot-1 {
+    0%, 12%, 100% { opacity: .18; }
+    18%, 34% { opacity: 1; }
+  }
+  @keyframes forensic-thinking-dot-2 {
+    0%, 28%, 100% { opacity: .18; }
+    36%, 52% { opacity: 1; }
+  }
+  @keyframes forensic-thinking-dot-3 {
+    0%, 48%, 100% { opacity: .18; }
+    56%, 72% { opacity: 1; }
+  }
+
+  .forensic-icon[data-reduced-motion="true"] .motion { animation: none !important; }
+.forensic-icon[data-reduced-motion="true"] .forensic-thinking-reticle { transform: none !important; }
+    .forensic-icon[data-reduced-motion="true"] .forensic-thinking-dot { opacity: 1 !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .forensic-icon:not([data-reduced-motion="false"]) .motion { animation: none !important; }
+.forensic-icon:not([data-reduced-motion="false"]) .forensic-thinking-reticle { transform: none !important; }
+    .forensic-icon:not([data-reduced-motion="false"]) .forensic-thinking-dot { opacity: 1 !important; }
+  }
+  </style>
+
+
+  <g class="forensic-face forensic-stroke" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 31h40c12 0 21 9 21 21v32c0 12-9 21-21 21H44c-12 0-21-9-21-21V52c0-12 9-21 21-21Z"/>
+    <path class="forensic-brow" d="M37 50c4-4 9-5 14-3" stroke-width="6"/>
+    <circle class="forensic-left-eye" fill="currentColor" stroke="none" cx="43" cy="68" r="5.5"/>
+    <circle class="forensic-lens-ring" cx="80" cy="63" r="14"/>
+    <g class="forensic-thinking-reticle forensic-reticle forensic-stroke motion" stroke-width="3.5">
+      <path d="M80 50v4M80 72v4M67 63h4M89 63h4"/>
+    </g>
+    <path d="M53 92c7 4 15 4 22-1"/>
+  <circle class="forensic-thinking-dot forensic-thinking-dot-1 forensic-solid motion" cx="74" cy="68" r="1.8"/>
+  <circle class="forensic-thinking-dot forensic-thinking-dot-2 forensic-solid motion" cx="80" cy="68" r="1.8"/>
+  <circle class="forensic-thinking-dot forensic-thinking-dot-3 forensic-solid motion" cx="86" cy="68" r="1.8"/></g>
+</svg>

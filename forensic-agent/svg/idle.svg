@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" class="forensic-icon" data-state="idle" role="img" aria-labelledby="forensic-idle-title forensic-idle-desc">
+  <title id="forensic-idle-title">Forensic agent, idle</title>
+  <desc id="forensic-idle-desc">A calm forensic agent with a subtle breathing motion and occasional blink.</desc>
+  <style>
+
+  .forensic-icon { overflow: visible; }
+  .forensic-icon .forensic-stroke { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+  .forensic-icon .forensic-solid { fill: currentColor; stroke: none; }
+  .forensic-icon .motion { transform-box: view-box; }
+  .forensic-icon[data-paused="true"] .motion { animation-play-state: paused !important; }
+
+
+  .forensic-idle-breathe { transform-origin: 64px 68px; animation: forensic-idle-breathe 4.8s ease-in-out infinite; }
+  .forensic-idle-blink { transform-origin: 43px 68px; animation: forensic-idle-blink 4.8s ease-in-out infinite; }
+  @keyframes forensic-idle-breathe {
+    0%, 100% { transform: translateY(0); }
+    45%, 62% { transform: translateY(-2px); }
+  }
+  @keyframes forensic-idle-blink {
+    0%, 42%, 52%, 100% { transform: scaleY(1); }
+    46%, 49% { transform: scaleY(0.08); }
+  }
+
+  .forensic-icon[data-reduced-motion="true"] .motion { animation: none !important; }
+.forensic-icon[data-reduced-motion="true"] .forensic-idle-face { transform: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .forensic-icon:not([data-reduced-motion="false"]) .motion { animation: none !important; }
+.forensic-icon:not([data-reduced-motion="false"]) .forensic-idle-face { transform: none !important; }
+  }
+  </style>
+
+
+  <g class="forensic-idle-face forensic-idle-breathe motion forensic-stroke" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 31h40c12 0 21 9 21 21v32c0 12-9 21-21 21H44c-12 0-21-9-21-21V52c0-12 9-21 21-21Z"/>
+    <path class="forensic-brow" d="M37 50c4-4 9-5 14-3" stroke-width="6"/>
+    <circle class="forensic-idle-blink forensic-left-eye motion" fill="currentColor" stroke="none" cx="43" cy="68" r="5.5"/>
+    <circle class="forensic-lens-ring" cx="80" cy="63" r="14"/>
+    <g class="forensic-reticle" stroke-width="3.5">
+      <path d="M80 50v4M80 72v4M67 63h4M89 63h4"/>
+    </g>
+    <path d="M53 92c7 4 15 4 22-1"/>
+  </g>
+</svg>

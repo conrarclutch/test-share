@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" class="forensic-icon" data-state="inspecting" role="img" aria-labelledby="forensic-inspecting-title forensic-inspecting-desc">
+  <title id="forensic-inspecting-title">Forensic agent, inspecting</title>
+  <desc id="forensic-inspecting-desc">A curious forensic agent tilts its head, raises one brow, and turns its eye toward the lens.</desc>
+  <style>
+
+  .forensic-icon { overflow: visible; }
+  .forensic-icon .forensic-stroke { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+  .forensic-icon .forensic-solid { fill: currentColor; stroke: none; }
+  .forensic-icon .motion { transform-box: view-box; }
+  .forensic-icon[data-paused="true"] .motion { animation-play-state: paused !important; }
+
+
+  .forensic-inspecting-head { transform-origin: 64px 68px; animation: forensic-inspecting-head 3.6s ease-in-out infinite; }
+  .forensic-inspecting-brow { transform-origin: 43px 48px; animation: forensic-inspecting-brow 3.6s ease-in-out infinite; }
+  .forensic-inspecting-gaze { transform-origin: 43px 68px; animation: forensic-inspecting-gaze 3.6s ease-in-out infinite; }
+  @keyframes forensic-inspecting-head {
+    0%, 100% { transform: rotate(0deg); }
+    22%, 76% { transform: rotate(5deg); }
+  }
+  @keyframes forensic-inspecting-brow {
+    0%, 100% { transform: translateY(0); }
+    20%, 78% { transform: translateY(-3px); }
+  }
+  @keyframes forensic-inspecting-gaze {
+    0%, 100% { transform: translate(0, 0); }
+    22% { transform: translate(4px, -1px); }
+    42%, 76% { transform: translate(3px, -1px); }
+  }
+
+  .forensic-icon[data-reduced-motion="true"] .motion { animation: none !important; }
+.forensic-icon[data-reduced-motion="true"] .forensic-inspecting-head, .forensic-icon[data-reduced-motion="true"] .forensic-inspecting-brow, .forensic-icon[data-reduced-motion="true"] .forensic-inspecting-gaze { transform: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .forensic-icon:not([data-reduced-motion="false"]) .motion { animation: none !important; }
+.forensic-icon:not([data-reduced-motion="false"]) .forensic-inspecting-head, .forensic-icon:not([data-reduced-motion="false"]) .forensic-inspecting-brow, .forensic-icon:not([data-reduced-motion="false"]) .forensic-inspecting-gaze { transform: none !important; }
+  }
+  </style>
+
+
+  <g class="forensic-inspecting-face forensic-inspecting-head motion forensic-stroke" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 31h40c12 0 21 9 21 21v32c0 12-9 21-21 21H44c-12 0-21-9-21-21V52c0-12 9-21 21-21Z"/>
+    <path class="forensic-inspecting-brow forensic-brow forensic-stroke motion" d="M37 50c4-4 9-5 14-3" stroke-width="6"/>
+    <circle class="forensic-inspecting-gaze forensic-left-eye forensic-solid motion" fill="currentColor" stroke="none" cx="43" cy="68" r="5.5"/>
+    <circle class="forensic-lens-ring" cx="80" cy="63" r="14"/>
+    <g class="forensic-reticle" stroke-width="3.5">
+      <path d="M80 50v4M80 72v4M67 63h4M89 63h4"/>
+    </g>
+    <path d="M53 92c7 4 15 4 22-1"/>
+  </g>
+</svg>

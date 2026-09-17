@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" class="forensic-icon" data-state="scanning" role="img" aria-labelledby="forensic-scanning-title forensic-scanning-desc">
+  <title id="forensic-scanning-title">Forensic agent, scanning</title>
+  <desc id="forensic-scanning-desc">A forensic agent scans through its lens with a rotating reticle and a clipped light beam.</desc>
+  <style>
+
+  .forensic-icon { overflow: visible; }
+  .forensic-icon .forensic-stroke { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+  .forensic-icon .forensic-solid { fill: currentColor; stroke: none; }
+  .forensic-icon .motion { transform-box: view-box; }
+  .forensic-icon[data-paused="true"] .motion { animation-play-state: paused !important; }
+
+
+  .forensic-scanning-reticle { transform-origin: 80px 63px; animation: forensic-scanning-reticle 3.2s linear infinite; }
+  .forensic-scanning-beam { transform-origin: 80px 63px; animation: forensic-scanning-beam 3.2s ease-in-out infinite; opacity: .58; }
+  .forensic-scanning-gaze { transform-origin: 43px 68px; animation: forensic-scanning-gaze 3.2s ease-in-out infinite; }
+  @keyframes forensic-scanning-reticle { to { transform: rotate(360deg); } }
+  @keyframes forensic-scanning-beam {
+    0%, 100% { transform: translateX(-8px); opacity: .18; }
+    50% { transform: translateX(8px); opacity: .68; }
+  }
+  @keyframes forensic-scanning-gaze {
+    0%, 100% { transform: translate(0, 0); }
+    48%, 62% { transform: translate(2px, -1px); }
+  }
+
+  .forensic-icon[data-reduced-motion="true"] .motion { animation: none !important; }
+.forensic-icon[data-reduced-motion="true"] .forensic-scanning-beam { opacity: .5 !important; transform: none !important; }
+    .forensic-icon[data-reduced-motion="true"] .forensic-scanning-reticle, .forensic-icon[data-reduced-motion="true"] .forensic-scanning-gaze { transform: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .forensic-icon:not([data-reduced-motion="false"]) .motion { animation: none !important; }
+.forensic-icon:not([data-reduced-motion="false"]) .forensic-scanning-beam { opacity: .5 !important; transform: none !important; }
+    .forensic-icon:not([data-reduced-motion="false"]) .forensic-scanning-reticle, .forensic-icon:not([data-reduced-motion="false"]) .forensic-scanning-gaze { transform: none !important; }
+  }
+  </style>
+  <defs><clipPath id="forensic-scanning-lens-clip"><circle cx="80" cy="63" r="13.7"/></clipPath></defs>
+
+  <g class="forensic-face forensic-stroke" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 31h40c12 0 21 9 21 21v32c0 12-9 21-21 21H44c-12 0-21-9-21-21V52c0-12 9-21 21-21Z"/>
+    <path class="forensic-brow" d="M37 50c4-4 9-5 14-3" stroke-width="6"/>
+    <circle class="forensic-scanning-gaze forensic-left-eye forensic-solid motion" fill="currentColor" stroke="none" cx="43" cy="68" r="5.5"/>
+    <circle class="forensic-lens-ring" cx="80" cy="63" r="14"/>
+    <g class="forensic-scanning-reticle forensic-reticle forensic-stroke motion" stroke-width="3.5">
+      <path d="M80 50v4M80 72v4M67 63h4M89 63h4"/>
+    </g>
+    <path d="M53 92c7 4 15 4 22-1"/>
+  <g clip-path="url(#forensic-scanning-lens-clip)"><rect class="forensic-scanning-beam forensic-solid motion" x="79" y="49" width="2" height="28" rx="1"/></g></g>
+</svg>
