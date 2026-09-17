@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="forensic-title forensic-desc">
+  <title id="forensic-title">Forensic agent symbol</title>
+  <desc id="forensic-desc">A compact curious robot head with an oversized forensic scanning eye and reticle.</desc>
+  <g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 31h40c12 0 21 9 21 21v32c0 12-9 21-21 21H44c-12 0-21-9-21-21V52c0-12 9-21 21-21Z"/>
+    <path d="M37 50c4-4 9-5 14-3" stroke-width="6"/>
+    <circle fill="currentColor" stroke="none" cx="43" cy="68" r="5.5"/>
+    <circle cx="80" cy="63" r="14"/>
+    <g stroke-width="3.5">
+      <path d="M80 50v4M80 72v4M67 63h4M89 63h4"/>
+    </g>
+    <path d="M53 92c7 4 15 4 22-1"/>
+  </g>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" class="forensic-icon" data-state="found" role="img" aria-labelledby="forensic-found-title forensic-found-desc">
+  <title id="forensic-found-title">Forensic agent, found evidence</title>
+  <desc id="forensic-found-desc">A forensic agent acknowledges a finding as its reticle resolves into a check mark inside the lens.</desc>
+  <style>
+
+  .forensic-icon { overflow: visible; }
+  .forensic-icon .forensic-stroke { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+  .forensic-icon .forensic-solid { fill: currentColor; stroke: none; }
+  .forensic-icon .motion { transform-box: view-box; }
+  .forensic-icon[data-paused="true"] .motion { animation-play-state: paused !important; }
+
+
+  .forensic-found-nod { transform-origin: 64px 68px; animation: forensic-found-nod 2.2s ease-in-out infinite; }
+  .forensic-found-reticle { animation: forensic-found-reticle 2.2s ease-in-out infinite; }
+  .forensic-found-check { opacity: 0; stroke-dasharray: 22; stroke-dashoffset: 22; animation: forensic-found-check 2.2s ease-in-out infinite; }
+  @keyframes forensic-found-nod {
+    0%, 19%, 100% { transform: translateY(0); }
+    38%, 53% { transform: translateY(1.5px); }
+    69% { transform: translateY(0); }
+  }
+  @keyframes forensic-found-reticle {
+    0%, 28%, 100% { opacity: 1; }
+    53%, 88% { opacity: .12; }
+  }
+  @keyframes forensic-found-check {
+    0%, 28% { opacity: 0; stroke-dashoffset: 22; }
+    48% { opacity: 1; stroke-dashoffset: 22; }
+    64%, 86% { opacity: 1; stroke-dashoffset: 0; }
+    100% { opacity: 0; stroke-dashoffset: 22; }
+  }
+
+  .forensic-icon[data-reduced-motion="true"] .motion { animation: none !important; }
+.forensic-icon[data-reduced-motion="true"] .forensic-found-nod, .forensic-icon[data-reduced-motion="true"] .forensic-found-reticle { transform: none !important; }
+    .forensic-icon[data-reduced-motion="true"] .forensic-found-check { opacity: 1 !important; stroke-dashoffset: 0 !important; }
+    .forensic-icon[data-reduced-motion="true"] .forensic-found-reticle { opacity: .12 !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .forensic-icon:not([data-reduced-motion="false"]) .motion { animation: none !important; }
+.forensic-icon:not([data-reduced-motion="false"]) .forensic-found-nod, .forensic-icon:not([data-reduced-motion="false"]) .forensic-found-reticle { transform: none !important; }
+    .forensic-icon:not([data-reduced-motion="false"]) .forensic-found-check { opacity: 1 !important; stroke-dashoffset: 0 !important; }
+    .forensic-icon:not([data-reduced-motion="false"]) .forensic-found-reticle { opacity: .12 !important; }
+  }
+  </style>
+
+
+  <g class="forensic-found-face forensic-found-nod motion forensic-stroke" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 31h40c12 0 21 9 21 21v32c0 12-9 21-21 21H44c-12 0-21-9-21-21V52c0-12 9-21 21-21Z"/>
+    <path class="forensic-brow" d="M37 50c4-4 9-5 14-3" stroke-width="6"/>
+    <circle class="forensic-left-eye" fill="currentColor" stroke="none" cx="43" cy="68" r="5.5"/>
+    <circle class="forensic-lens-ring" cx="80" cy="63" r="14"/>
+    <g class="forensic-found-reticle forensic-reticle forensic-stroke motion" stroke-width="3.5">
+      <path d="M80 50v4M80 72v4M67 63h4M89 63h4"/>
+    </g>
+    <path d="M53 92c7 4 15 4 22-1"/>
+  <path class="forensic-found-check forensic-stroke motion" d="M73 63.5l4 4 9-9" stroke-width="3.5"/></g>
+</svg>
