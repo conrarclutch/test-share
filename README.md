@@ -33,3 +33,7 @@ Switch the image source to the matching state as the agent progresses. Use `fore
 [Investigation OS specification](splank)
 
 This repository currently contains the planning document and the agent animation kit; an application implementation is not included yet.
+
+## Evidence handoff
+
+[September 28, 2026 external-evidence package](evidence-handoff/2026-09-28/README.md), with the supplied photograph removed, a checksum, and instructions for internal investigators.
